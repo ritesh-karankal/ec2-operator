@@ -54,7 +54,15 @@ var _ = Describe("EC2Instance Controller", func() {
 						Name:      resourceName,
 						Namespace: resourceNamespace,
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: computev1alpha1.EC2InstanceSpec{
+						InstanceType:   "t3.micro",
+						InstanceName:   "test-instance",
+						AMIId:          "ami-12345678",
+						Region:         "us-east-1",
+						KeyPair:        "test-key",
+						SecurityGroups: []string{"sg-12345678"},
+						Subnet:         "subnet-12345678",
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}

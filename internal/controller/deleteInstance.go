@@ -14,7 +14,10 @@ func deleteEc2Instance(ctx context.Context, ec2Instance *computev1alpha1.EC2Inst
 
 	l.Info("Deleting EC2 instance", "instanceID", ec2Instance.Status.InstanceID)
 
-	ec2Client := awsClient(ec2Instance.Spec.Region)
+	ec2Client, err := awsClient(ctx, ec2Instance.Spec.Region)
+	if err != nil {
+		return false, err
+	}
 
 	terminateResult, err := ec2Client.TerminateInstances(ctx, &ec2.TerminateInstancesInput{
 		InstanceIds: []string{ec2Instance.Status.InstanceID},

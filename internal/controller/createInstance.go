@@ -13,14 +13,17 @@ import (
 )
 
 func createEc2Instance(ctx context.Context, ec2Instance *computev1alpha1.EC2Instance) (createdInstanceInfo *computev1alpha1.CreatedInstanceInfo, err error) {
-	l := log.Log.WithName("createEc2Instance")
+	l := log.FromContext(ctx).WithName("createEc2Instance")
 
 	l.Info("=== STARTING EC2 INSTANCE CREATION ===",
 		"ami", ec2Instance.Spec.AMIId,
 		"instanceType", ec2Instance.Spec.InstanceType,
 		"region", ec2Instance.Spec.Region)
 
-	ec2Client := awsClient(ec2Instance.Spec.Region)
+	ec2Client, err := awsClient(ctx, ec2Instance.Spec.Region)
+	if err != nil {
+		return nil, err
+	}
 
 	runInput := &ec2.RunInstancesInput{
 		ImageId:          aws.String(ec2Instance.Spec.AMIId),
@@ -34,7 +37,7 @@ func createEc2Instance(ctx context.Context, ec2Instance *computev1alpha1.EC2Inst
 
 	l.Info("=== CALLING AWS RunInstances API ===")
 
-	result, err := ec2Client.RunInstances(context.TODO(), runInput)
+	result, err := ec2Client.RunInstances(ctx, runInput)
 	if err != nil {
 		l.Error(err, "Failed to create EC2 instance")
 		return nil, fmt.Errorf("failed to create EC2 instance: %w", err)
@@ -54,7 +57,7 @@ func createEc2Instance(ctx context.Context, ec2Instance *computev1alpha1.EC2Inst
 	runWaiter := ec2.NewInstanceRunningWaiter(ec2Client)
 	maxWaitTime := 3 * time.Minute
 
-	err = runWaiter.Wait(context.TODO(), &ec2.DescribeInstancesInput{
+	err = runWaiter.Wait(ctx, &ec2.DescribeInstancesInput{
 		InstanceIds: []string{*inst.InstanceId},
 	}, maxWaitTime)
 	if err != nil {
@@ -67,7 +70,7 @@ func createEc2Instance(ctx context.Context, ec2Instance *computev1alpha1.EC2Inst
 		InstanceIds: []string{*inst.InstanceId},
 	}
 
-	describeResult, err := ec2Client.DescribeInstances(context.TODO(), describeInput)
+	describeResult, err := ec2Client.DescribeInstances(ctx, describeInput)
 	if err != nil {
 		l.Error(err, "Failed to describe EC2 instance")
 		return nil, fmt.Errorf("failed to describe EC2 instance: %w", err)
